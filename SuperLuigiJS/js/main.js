@@ -1,10 +1,10 @@
-import * as THREE from './libs/three.module.js';
+import * as THREE from './libs/threejs/build/three.module.js';
 import TWEEN from './libs/tween.esm.js'; // https://cdn.jsdelivr.net/npm/@tweenjs/tween.js@18.5.0/dist/tween.esm.js
-import Stats from './libs/stats.module.js';
-import { GUI } from './libs/dat.gui.module.js';
-import { OrbitControls } from './libs/OrbitControls.js';
-import { GLTFLoader } from './libs/GLTFLoader.js';
-import { OutlineEffect } from './libs/OutlineEffect.js';
+import Stats from './libs/threejs/examples/jsm/libs/stats.module.js';
+import { GUI } from './libs/threejs/examples/jsm/libs/dat.gui.module.js';
+import { OrbitControls } from './libs/threejs/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from './libs/threejs/examples/jsm/loaders/GLTFLoader.js';
+import { OutlineEffect } from './libs/threejs/examples/jsm/effects/OutlineEffect.js';
 
 /*
 TODO list:
