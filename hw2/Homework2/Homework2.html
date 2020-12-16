@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+    <head>
+
+        <title>Interactive Graphics - Homework 2</title>
+        
+        <!-- Required meta tags -->
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <meta name="description" content="">
+        <meta name="author" content="Stefano Esposito">
+
+        <!-- Bootstrap -->
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+        <!-- Add icon library -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+        
+        <!-- Load texture -->
+        <img src="textures/uvgrid.png" id="uv_grid-texture" width=0 height=0 hidden>
+        <img src="textures/floor.png" id="floor-texture" width=0 height=0 hidden>
+        <img src="textures/grass.png" id="grass-texture" width=0 height=0 hidden>
+        <img src="textures/terrain.png" id="terrain-texture" width=0 height=0 hidden>
+        <img src="textures/dirt.png" id="dirt-texture" width=0 height=0 hidden>
+        <img src="textures/bear_body.png" id="bear_body-texture" width=0 height=0 hidden>
+        <img src="textures/bear_head.png" id="bear_head-texture" width=0 height=0 hidden>
+        <img src="textures/wood.png" id="wood-texture" width=0 height=0 hidden>
+        <img src="textures/leaves.png" id="leaves-texture" width=0 height=0 hidden>
+
+        <style>
+            canvas {
+                margin-top: 2vh;
+                width: 100%;
+                height: 96vh;
+                display: block;
+                border-radius: 5px;
+            }
+        </style>
+
+        <script id="vertex-shader" type="x-shader/x-vertex">
+            #version 300 es
+            
+            in vec4 aPosition;
+            in vec2 aTexCoord;
+            in float aTexIndex;
+
+            uniform mat4 uModelViewMatrix;
+            uniform mat4 uProjectionMatrix;
+
+            out vec2 vTexCoord;
+            out float vTexIndex;
+            
+            void main()
+            {
+                gl_Position = uProjectionMatrix * uModelViewMatrix * aPosition;
+                vTexCoord = aTexCoord; 
+                vTexIndex = aTexIndex;
+            }
+        </script>
+            
+        <script id="fragment-shader" type="x-shader/x-fragment">
+            #version 300 es
+            
+            precision mediump float;
+            
+            in vec2 vTexCoord;
+            in float vTexIndex;
+
+            /* Textures */
+            uniform int uTextureIndex;
+            uniform sampler2D uTexture0;
+            uniform sampler2D uTexture1;
+            uniform sampler2D uTexture2;
+            uniform sampler2D uTexture3;
+            uniform sampler2D uTexture4;
+            uniform sampler2D uTexture5;
+            uniform sampler2D uTexture6;
+            uniform sampler2D uTexture7;
+
+            out vec4 fColor;
+            
+            void main()
+            {   
+                
+                switch(uTextureIndex) {
+                case 0:
+                    fColor = texture(uTexture0, vTexCoord);
+                    break;
+                case 1: 
+                    fColor = texture(uTexture1, vTexCoord);
+                    break;
+                case 2: 
+                    fColor = texture(uTexture2, vTexCoord);
+                    break;
+                case 3: 
+                    fColor = texture(uTexture3, vTexCoord);
+                    break;
+                case 4: 
+                    fColor = texture(uTexture4, vTexCoord);
+                    break;
+                case 5: 
+                    fColor = texture(uTexture5, vTexCoord);
+                    break;
+                case 6: 
+                    fColor = texture(uTexture6, vTexCoord);
+                    break;
+                case 7: 
+                    fColor = texture(uTexture7, vTexCoord);
+                    break;
+                default:
+                    fColor = vec4(1.0, 0.0, 0.0, 1.0);
+                }
+                
+                // transparency
+                if(fColor.a < 0.85) discard;
+            }
+        </script>
+
+        <script type="text/javascript" src="../Common/InitShaders.js"></script>
+        <script type="text/javascript" src="../Common/MVnew.js"></script>
+        <script type="text/javascript" src="Homework2.js"></script>
+
+    </head>
+
+    <body>
+
+        <div class="wrapper container-fluid">
+
+            <div class="row">
+                <!-- WebGL Canvas -->
+                <div class="col text-center"> 
+                    <!-- Canvas -->
+                    <canvas id="gl-canvas">
+                        Oops ... your browser doesn't support the HTML5 canvas element
+                    </canvas>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col" style="padding: 20px 40px 20px 40px;">
+                    <div class="row">
+                        <div class="col-2">
+                            <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                                <!-- <a class="nav-link" id="v-pills-angles-tab" data-toggle="pill" href="#v-pills-angles" role="tab" aria-controls="v-pills-angles" aria-selected="false">Angles</a> -->
+                                <a class="nav-link" id="v-pills-view-tab" data-toggle="pill" href="#v-pills-view" role="tab" aria-controls="v-pills-view" aria-selected="false">Viewing</a>
+                                <a class="nav-link active" id="v-pills-animation-tab" data-toggle="pill" href="#v-pills-animation" role="tab" aria-controls="v-pills-animation" aria-selected="true">Animation</a>
+                                <a class="nav-link" id="v-pills-credits-tab" data-toggle="pill" href="#v-pills-credits" role="tab" aria-controls="v-pills-credits" aria-selected="false">Credits</a>
+                            </div>
+                        </div>
+                        <div class="col-10">
+                            <div class="tab-content" id="v-pills-tabContent">
+                                
+                                <!-- <div class="tab-pane fade" id="v-pills-angles" role="tabpanel" aria-labelledby="v-pills-angles-tab">
+
+                                    <div class="row">
+                                        <div class="col text-center">
+
+                                            <h5>Angles</h5>    
+
+                                            <div id="test">
+                                            </div>
+                                            
+                                            <label for="slider0">Torso [-180, 180]</label>
+                                            <input id="slider0" class="custom-range" type="range" min="-180" max="180" step="10" value="0"/>
+                                                
+                                            <label for="slider10">Head2 [-180, 180]</label>
+                                            <input id="slider10" class="custom-range" type="range" min="-180" max="180" step="10" value="0"/>
+                                                
+                                                
+                                            <label for="slider1">Head1 [-180, 180]</label>    
+                                            <input id="slider1" class="custom-range" type="range" min="-180" max="180" step="10" value="0"/>
+                                                    
+                                            <label for="slider2">Left Upper Arm [-180, 180]</label>    
+                                            <input id="slider2" class="custom-range" type="range" min="-180" max="180" step="10" value="0"/>
+                                                    
+                                                
+                                            <label for="slider3">Left Lower Arm [-180, 180]</label>    
+                                            <input id="slider3" class="custom-range" type="range" min="-180" max="180" step="10" value="0"/>
+                                                
+                                                
+                                            <label for="slider4">Right Upper Arm [-180, 180]</label>    
+                                            <input id="slider4" class="custom-range" type="range" min="-180" max="180" step="10" value="0"/>
+                                                
+                                                
+                                            <label for="slider5">Right Lower Arm [-180, 180]</label>    
+                                            <input id="slider5" class="custom-range" type="range" min="-180" max="180" step="10" value="0"/>
+                                                
+                                                
+                                            <label for="slider6">Left Upper Leg [-180, 180]</label>    
+                                            <input id="slider6" class="custom-range" type="range" min="-180" max="180" step="10" value="0"/>
+                                                
+                                                
+                                            <label for="slider7">Left Lower Leg [-180, 180]</label>    
+                                            <input id="slider7" class="custom-range" type="range" min="-180" max="180" step="10" value="0"/>
+                                                
+                                                
+                                            <label for="slider8">Right Upper Leg [-180, 180]</label>    
+                                            <input id="slider8" class="custom-range" type="range" min="-180" max="180" step="10" value="0"/>
+                                                
+                                                
+                                            <label for="slider9">Right Lower Leg [-180, 180]</label>    
+                                            <input id="slider9" class="custom-range" type="range" min="-180" max="180" step="10" value="0"/>
+                                                
+                                                
+                                        </div>
+                                    </div>
+
+                                </div> -->
+                                <div class="tab-pane fade" id="v-pills-view" role="tabpanel" aria-labelledby="v-pills-view-tab">
+
+                                    <!-- Viewing parameters -->
+                                    <div class="row">
+                                        <div class="col">
+                                            <h4>Viewing parameters</h4>
+                                            <div class="custom-control custom-switch">
+                                                <input type="checkbox" class="custom-control-input" id="togglePerspective">
+                                                <label class="custom-control-label" for="togglePerspective">Toggle Perspective Projection</label>
+                                            </div>
+                                        </div>
+                                        <div class="col text-center">
+                                            <label for="radiusSlider">Radius</label>
+                                            <input type="range" class="custom-range" min="0" max="40" step="0.1" id="radiusSlider">  
+                                            <label for="thetaSlider">Theta</label>
+                                            <input type="range" class="custom-range" min="-180" max="180" step="10" id="thetaSlider">
+                                            <label for="phiSlider">Phi</label>
+                                            <input type="range" class="custom-range" min="0" max="180" step="10" id="phiSlider">
+                                            <label for="fovSlider">FOV</label>
+                                            <input type="range" class="custom-range" min="20" max="100" step="5" id="fovSlider">
+                                        </div>
+                                        <div class="col text-center">
+                                            <label for="near">Near</label>
+                                            <input type="number" class="form-control" id="near">
+                                            <!--
+                                            <label for="top">Top</label>
+                                            <input type="number" class="form-control" id="top">
+                                            <label for="bottom">Bottom</label>
+                                            <input type="number" class="form-control" id="bottom">
+                                            -->
+                                        </div>
+                                        <div class="col text-center">
+                                            <label for="far">Far</label>
+                                            <input type="number" class="form-control" id="far">
+                                            <!--
+                                            <label for="left">Left</label>
+                                            <input type="number" class="form-control" id="left">
+                                            <label for="right">Right</label>
+                                            <input type="number" class="form-control" id="right">
+                                            -->
+                                        </div>
+                                        <!--
+                                        <div class="col text-center">
+                                            <h4>Rotation</h4>
+                                            <label for="xSlider">X Rot Speed</label>
+                                            <input type="range" class="custom-range" min="-5" max="5" step="0.1" id="xSlider">  
+                                            <label for="ySlider">Y Rot Speed</label>
+                                            <input type="range" class="custom-range" min="-5" max="5" step="0.1" id="ySlider">
+                                            <label for="zSlider">Z Rot Speed</label>
+                                            <input type="range" class="custom-range" min="-5" max="5" step="0.1" id="zSlider">
+                                        </div>
+                                        -->
+                                    </div>
+
+                                </div>
+                                <div class="tab-pane fade show active" id="v-pills-animation" role="tabpanel" aria-labelledby="v-pills-animation-tab">
+
+                                    <!-- Animation parameters -->
+                                    <div class="row">
+                                        <div class="col text-center">
+                                            <h4>Progress</h4>
+                                        </div>
+                                    </div>
+                                    <div class="progress">
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" id="animProgress" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
+                                    </div>
+                                    <br>
+                                    <div class="row">
+                                        <div class="col text-center">
+                                            <button type="button" class="btn btn-success" id="playButton" >
+                                                <i class="fa fa-play"></i> Play</button>
+                                            <button type="button" class="btn btn-warning" id="pauseButton" >
+                                                <i class="fa fa-pause"></i> Pause</button>
+                                            <button type="button" class="btn btn-danger" id="resetButton" >
+                                                <i class="fa fa-history"></i> Reset</button>
+                                        </div>
+                                        <!--
+                                        <div class="col">
+                                            <label for="animTimeSlider">Time</label>
+                                            <input type="range" class="custom-range" min="0" max="1000" step="1" id="animTimeSlider" disabled>
+                                        </div>
+                                        -->
+                                    </div>
+
+                                </div>
+                                <div class="tab-pane fade" id="v-pills-credits" role="tabpanel" aria-labelledby="v-pills-credits-tab">
+
+                                    <div class="row">
+                                        <div class="col text-center">
+                                            
+                                            <h4>Credits</h4>
+                                            <b>Interactive Graphics - Homework 2</b> <br>
+                                            Stefano Esposito <br>
+                                            Academic Year 2019/2020 <br>
+                                            Course held by Professor Marco Schaerf <br><br>
+                                            <p>For the development of the application I used as reference the code presented during the lessons of the course and also the code of the examples provided by the textbook.</p>
+
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Bootstrap stuff -->
+        <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+
+    </body>
+
+</html>

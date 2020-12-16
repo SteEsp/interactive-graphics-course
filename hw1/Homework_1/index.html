@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+
+        <title>Interactive Graphics - Homework 1</title>
+        
+        <!-- Required meta tags -->
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <meta name="description" content="">
+        <meta name="author" content="Stefano Esposito">
+
+        <!-- Bootstrap -->
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+        
+        <style>
+            canvas {
+              width: 100vw;
+              height: 60vh;
+              display: block;
+            }
+        </style>
+
+        <!-- Run server: http-server.cmd -->
+
+    </head>
+    
+    <script id="vertex-shader" type="x-shader/x-vertex">
+        #version 300 es
+    
+        in vec4 aPosition;
+        in vec4 aColor;
+        in vec2 aTexCoord;
+        in vec4 aNormal;
+        
+        out vec3 vN, vDirL, vSpotL, vE, vSpotD;
+        out vec2 vTexCoord;
+        out vec4 vColor;
+
+        uniform vec3 uEyePosition;
+        uniform mat4 uModelViewMatrix;
+        uniform mat4 uProjectionMatrix;
+        uniform mat3 uNormalMatrix;
+        // Dir
+        uniform vec4 uDirDirection; // for directional light
+        // Spot
+        uniform vec4 uSpotPosition; // for spotlight
+        //uniform vec4 uSpotDirection;
+
+        void main()
+        {   
+
+            vE = normalize((uEyePosition).xyz);
+            vN = normalize((aNormal).xyz);
+            
+            // Directional light
+            vDirL = normalize((uDirDirection).xyz);
+            
+            // Spotlight 
+            vSpotL = normalize((uSpotPosition - aPosition).xyz);
+            vSpotD = normalize((uSpotPosition).xyz);
+
+            // Text coords
+            vTexCoord = aTexCoord;
+
+            // Vertex color
+            vColor = aColor;
+
+            gl_Position = uProjectionMatrix * uModelViewMatrix * aPosition;
+
+        }
+    </script>
+
+    <script id="fragment-shader" type="x-shader/x-fragment">
+        #version 300 es
+    
+        precision mediump float;
+    
+        in vec3 vN, vDirL, vSpotL, vSpotD, vE;
+        in vec2 vTexCoord;
+        in vec4 vColor;
+
+        out vec4 fColor;
+        
+        /* Global */
+        uniform vec4 uGlobalAmbientProduct;
+
+        /* Dir */
+        uniform bool uIsDirectionalLightActive;
+        uniform vec4 uDirAmbientProduct;
+        uniform vec4 uDirDiffuseProduct;
+        uniform vec4 uDirSpecularProduct;
+
+        /* Spot */
+        uniform bool uIsSpotlightActive;
+        uniform vec4 uSpotAmbientProduct;
+        uniform vec4 uSpotDiffuseProduct;
+        uniform vec4 uSpotSpecularProduct;
+        uniform float uInnerSpotCutoff;
+        uniform float uOuterSpotCutoff;
+
+        /* Material */
+        uniform float uShininess;
+
+        /* Textures */
+        uniform bool uIsTextureActive;
+        uniform sampler2D uTextureMap;
+
+        void main()
+        {
+
+            vec3 E = normalize(vE);
+            vec3 N = normalize(vN);
+
+            // Directional -----------------------
+
+            vec3 DirL = normalize(vDirL);
+            vec3 DirH = normalize(DirL + E);
+
+            vec4 dirAmbient, dirDiffuse, dirSpecular;
+            if(uIsDirectionalLightActive) {
+
+                dirAmbient = uDirAmbientProduct;
+
+                float DirKd = max(dot(DirL, N), 0.0);
+                dirDiffuse = DirKd * uDirDiffuseProduct;
+
+                float DirKs = pow(max(dot(N, DirH), 0.0), uShininess);
+                dirSpecular = DirKs * uDirSpecularProduct;
+                if (dot(DirL, N) < 0.0) {
+                    dirSpecular = vec4(0.0, 0.0, 0.0, 1.0);
+                }
+
+            } else {
+
+                dirAmbient = vec4(0.0, 0.0, 0.0, 1.0);
+                dirDiffuse = vec4(0.0, 0.0, 0.0, 1.0);
+                dirSpecular = vec4(0.0, 0.0, 0.0, 1.0);
+
+            }
+
+            // Spotlight -------------------------
+
+            vec3 SpotL = normalize(vSpotL);
+            vec3 SpotD = normalize(vSpotD);
+            vec3 SpotH = normalize(SpotL + E);
+
+            vec4 spotAmbient, spotDiffuse, spotSpecular;          
+            if(uIsSpotlightActive) {
+
+                spotAmbient = uSpotAmbientProduct;
+
+                float inSpotlight = smoothstep(uOuterSpotCutoff, uInnerSpotCutoff,  dot(SpotL, SpotD));
+                float SpotKd = inSpotlight * max(dot(SpotL, N), 0.0);
+                spotDiffuse = SpotKd * uSpotDiffuseProduct;
+
+                float SpotKs = inSpotlight * pow(max(dot(SpotH, N), 0.0), uShininess);
+                spotSpecular = SpotKs * uSpotSpecularProduct;
+                
+            } else {
+
+                spotAmbient = vec4(0.0, 0.0, 0.0, 1.0);
+                spotDiffuse = vec4(0.0, 0.0, 0.0, 1.0);
+                spotSpecular = vec4(0.0, 0.0, 0.0, 1.0);
+
+            }
+
+            // Overall lighting -----------------
+
+            vec4 ambient = dirAmbient + spotAmbient;
+            vec4 diffuse = dirDiffuse + spotDiffuse;
+            vec4 specular = dirSpecular + spotSpecular;
+
+            if (uIsTextureActive) {
+                fColor = uGlobalAmbientProduct + texture(uTextureMap, vTexCoord) * (ambient + diffuse + specular);
+            } else {
+                fColor = uGlobalAmbientProduct + vColor * (ambient + diffuse + specular);
+            }
+            fColor.a = 1.0;
+
+        }
+    </script>
+
+    <script id="fragment-shader-cartoon" type="x-shader/x-fragment">
+        #version 300 es
+    
+        precision mediump float;
+    
+        in vec3 vN, vDirL, vSpotL, vSpotD, vE;
+        in vec2 vTexCoord;
+        in vec4 vColor;
+
+        out vec4 fColor;
+
+        /* Global */
+        uniform vec4 uGlobalAmbientProduct;
+        
+        /* Dir */
+        uniform bool uIsDirectionalLightActive;
+        uniform vec4 uDirAmbientProduct;
+        uniform vec4 uDirDiffuseProduct;
+        uniform vec4 uDirSpecularProduct;
+
+        /* Spot */
+        uniform bool uIsSpotlightActive;
+        uniform vec4 uSpotAmbientProduct;
+        uniform vec4 uSpotDiffuseProduct;
+        uniform vec4 uSpotSpecularProduct;
+        uniform float uInnerSpotCutoff;
+        uniform float uOuterSpotCutoff;
+
+        /* Material */
+        uniform float uShininess;
+
+        /* Textures */
+        uniform bool uIsTextureActive;
+        uniform sampler2D uTextureMap;
+
+        void main()
+        {
+
+            vec3 E = normalize(vE);
+            vec3 N = normalize(vN);
+
+            // Directional -----------------------
+
+            vec3 DirL = normalize(vDirL);
+            vec3 DirH = normalize(DirL + E);
+
+            /* Calculate the illuminated diffuse color */
+            vec4 DirCi;
+            DirCi = uDirAmbientProduct + uDirDiffuseProduct;
+
+            /* Calculate the shadowed diffuse color */ 
+            vec4 DirCs;
+            DirCs = uDirAmbientProduct;
+
+            /* Color assignement */
+            vec4 DirColor;
+            if ( max(dot(DirL, N), 0.0 ) >= 0.5) {
+                DirColor = DirCi;
+            } else {
+                DirColor = DirCs;
+            }
+
+            // Spotlight -------------------------
+
+            vec3 SpotL = normalize(vSpotL);
+            vec3 SpotD = normalize(vSpotD);
+            vec3 SpotH = normalize(SpotL + E);
+
+            /* Calculate the illuminated diffuse color */
+            vec4 SpotCi;
+
+            float inSpotlight = smoothstep(uOuterSpotCutoff, uInnerSpotCutoff, dot(SpotL, SpotD));
+            SpotCi = uSpotAmbientProduct + inSpotlight * uSpotDiffuseProduct;
+
+            /* Calculate the shadowed diffuse color */ 
+            vec4 SpotCs;
+
+            SpotCs = uSpotAmbientProduct;
+
+            /* Color assignement */
+            vec4 SpotColor;
+            if ( max( dot(SpotL, N), 0.0 ) >= 0.5) {
+                SpotColor = SpotCi;
+            } else {
+                SpotColor = SpotCs;
+            }
+
+            // Overall lighting -----------------
+
+            if (uIsTextureActive) {
+                fColor = uGlobalAmbientProduct + texture(uTextureMap, vTexCoord) * DirColor + SpotColor;
+            } else {
+                fColor = uGlobalAmbientProduct + vColor * DirColor + SpotColor;
+            }
+            fColor.a = 1.0;
+
+        }
+    </script>
+    
+    <script type="text/javascript" src="../Common/InitShaders.js"></script>
+    <script type="text/javascript" src="../Common/MVnew.js"></script>
+    <script type="text/javascript" src="homework1.js"></script>
+
+    <body>
+        
+        <div class="row">
+            <!-- WebGL Canvas -->
+            <div class="col text-center"> 
+                <!-- Canvas -->
+                <canvas id="gl-canvas">
+                    Oops ... your browser doesn't support the HTML5 canvas element
+                </canvas>
+            </div>
+        </div>
+
+        <!-- Load texture -->
+        <img src="texture_icecream.jpg" id="texture_img" width=0 height=0 hidden>
+
+        <div class="row">
+            <div class="col" style="padding: 20px 40px 20px 40px;">
+                <div class="row">
+                    <div class="col-2">
+                        <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                            <a class="nav-link active" id="v-pills-directional-tab" data-toggle="pill" href="#v-pills-directional" role="tab" aria-controls="v-pills-directional" aria-selected="true">Directional Light</a>
+                            <a class="nav-link" id="v-pills-spotlight-tab" data-toggle="pill" href="#v-pills-spotlight" role="tab" aria-controls="v-pills-spotlight" aria-selected="false">Spotlight</a>
+                            <a class="nav-link" id="v-pills-material-tab" data-toggle="pill" href="#v-pills-material" role="tab" aria-controls="v-pills-material" aria-selected="false">Material properties</a>
+                            <a class="nav-link" id="v-pills-view-tab" data-toggle="pill" href="#v-pills-view" role="tab" aria-controls="v-pills-view" aria-selected="false">Viewing</a>
+                            <a class="nav-link" id="v-pills-shading-tab" data-toggle="pill" href="#v-pills-shading" role="tab" aria-controls="v-pills-shading" aria-selected="false">Shading</a>
+                            <a class="nav-link" id="v-pills-credits-tab" data-toggle="pill" href="#v-pills-credits" role="tab" aria-controls="v-pills-credits" aria-selected="false">Credits</a>
+                        </div>
+                    </div>
+                    <div class="col-10">
+                        <div class="tab-content" id="v-pills-tabContent">
+
+                            <div class="tab-pane fade show active" id="v-pills-directional" role="tabpanel" aria-labelledby="v-pills-directional-tab">
+
+                                <!-- Directional Light -->
+                                <div class="row">
+                                    <div class="col text-center">
+                                        <h5>Position</h5>
+                                        <label for="dir_X">X</label>
+                                        <input type="range" class="custom-range" min="-100" max="100" step="1" id="dir_X">  
+                                        <label for="dir_Y">Y</label>
+                                        <input type="range" class="custom-range" min="-100" max="100" step="1" id="dir_Y">
+                                        <label for="dir_Z">Z</label>
+                                        <input type="range" class="custom-range" min="-100" max="100" step="1" id="dir_Z">
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="toggleDirectional">
+                                            <label class="custom-control-label" for="toggleDirectional">Toggle Directional light</label>
+                                        </div>
+                                    </div>
+                                    <div class="col text-center">
+                                        <h5>Ambient</h5>
+                                        <label for="dir_ambient_r">R</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="dir_ambient_r">
+                                        <label for="dir_ambient_g">G</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="dir_ambient_g">
+                                        <label for="dir_ambient_b">B</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="dir_ambient_b">
+                                    </div>
+                                    <div class="col text-center">
+                                        <h5>Diffuse</h5>
+                                        <label for="dir_diffuse_r">R</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="dir_diffuse_r">
+                                        <label for="dir_diffuse_g">G</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="dir_diffuse_g">
+                                        <label for="dir_diffuse_b">B</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="dir_diffuse_b">
+                                    </div>
+                                    <div class="col text-center">
+                                        <h5>Specular</h5>
+                                        <label for="dir_specular_r">R</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="dir_specular_r">
+                                        <label for="dir_specular_g">G</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="dir_specular_g">
+                                        <label for="dir_specular_b">B</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="dir_specular_b">
+                                    </div>
+                                </div>
+
+                            </div>
+                            <div class="tab-pane fade" id="v-pills-spotlight" role="tabpanel" aria-labelledby="v-pills-spotlight-tab">
+                                
+                                <!-- Spotlight -->
+                                <div class="row">
+                                    <div class="col text-center">
+                                        <h5>Position</h5>
+                                        <label for="spotRadiusSlider">Spotlight Radius</label>
+                                        <input type="range" class="custom-range" min="0" max="20" step="0.1" id="spotRadiusSlider">  
+                                        <label for="spotThetaSlider">Spotlight Theta</label>
+                                        <input type="range" class="custom-range" min="0" max="360" step="10" id="spotThetaSlider">
+                                        <label for="spotPhiSlider">Spotlight Phi</label>
+                                        <input type="range" class="custom-range" min="0" max="360" step="10" id="spotPhiSlider">
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="toggleSpotlight">
+                                            <label class="custom-control-label" for="toggleSpotlight">Toggle Spotlight</label>
+                                        </div>
+                                    </div>
+                                    <div class="col text-center">
+                                        <h5>Smoothing</h5>
+                                        <label for="spot_cutoff">Cutoff</label>
+                                        <input type="number" class="form-control" min="0" max="90" step="1" id="spot_cutoff">
+                                        <label for="spot_harshness">Harshness</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="spot_harshness">
+                                    </div>
+                                    <div class="col text-center">
+                                        <h5>Ambient</h5>
+                                        <label for="spot_ambient_r">R</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="spot_ambient_r">
+                                        <label for="spot_ambient_g">G</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="spot_ambient_g">
+                                        <label for="spot_ambient_b">B</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="spot_ambient_b">
+                                    </div>
+                                    <div class="col text-center">
+                                        <h5>Diffuse</h5>
+                                        <label for="spot_diffuse_r">R</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="spot_diffuse_r">
+                                        <label for="spot_diffuse_g">G</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="spot_diffuse_g">
+                                        <label for="spot_diffuse_b">B</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="spot_diffuse_b">
+                                    </div>
+                                    <div class="col text-center">
+                                        <h5>Specular</h5>
+                                        <label for="spot_specular_r">R</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="spot_specular_r">
+                                        <label for="spot_specular_g">G</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="spot_specular_g">
+                                        <label for="spot_specular_b">B</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="spot_specular_b">
+                                    </div>
+                                </div>
+
+                            </div>
+                            <div class="tab-pane fade" id="v-pills-material" role="tabpanel" aria-labelledby="v-pills-material-tab">
+
+                                <!-- Material Properties -->
+                                <div class="row">
+                                    <div class="col text-center">
+                                        <h5>Ambient</h5>
+                                        <label for="ambient_r">R</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="ambient_r">
+                                        <label for="ambient_g">G</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="ambient_g">
+                                        <label for="ambient_b">B</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="ambient_b">
+                                    </div>
+                                    <div class="col text-center">
+                                        <h5>Diffuse</h5>
+                                        <label for="diffuse_r">R</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="diffuse_r">
+                                        <label for="diffuse_g">G</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="diffuse_g">
+                                        <label for="diffuse_b">B</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="diffuse_b">
+                                    </div>
+                                    <div class="col text-center">
+                                        <h5>Specular</h5>
+                                        <label for="specular_r">R</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="specular_r">
+                                        <label for="specular_g">G</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="specular_g">
+                                        <label for="specular_b">B</label>
+                                        <input type="number" class="form-control" min="0" max="1" step="0.01" id="specular_b">
+                                    </div>
+                                    <div class="col text-center">
+                                        <h5>Other</h5>
+                                        <label for="shininess">Shininess</label>
+                                        <input type="number" class="form-control" min="0.1" max="1000" step="1" id="shininess">
+                                    </div>
+                                </div>
+
+                            </div>
+                            <div class="tab-pane fade" id="v-pills-view" role="tabpanel" aria-labelledby="v-pills-view-tab">
+
+                                <!-- Viewing parameters -->
+                                <div class="row">
+                                    <div class="col">
+                                        <h4>Viewing parameters</h4>
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="togglePerspective">
+                                            <label class="custom-control-label" for="togglePerspective">Toggle Perspective Projection</label>
+                                        </div>
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="toggleWireframe">
+                                            <label class="custom-control-label" for="toggleWireframe">Toggle Wireframe</label>
+                                        </div>
+                                    </div>
+                                    <div class="col text-center">
+                                        <label for="radiusSlider">Radius</label>
+                                        <input type="range" class="custom-range" min="0" max="20" step="0.1" id="radiusSlider">  
+                                        <label for="thetaSlider">Theta</label>
+                                        <input type="range" class="custom-range" min="0" max="360" step="10" id="thetaSlider">
+                                        <label for="phiSlider">Phi</label>
+                                        <input type="range" class="custom-range" min="0" max="360" step="10" id="phiSlider">
+                                        <label for="fovSlider">FOV</label>
+                                        <input type="range" class="custom-range" min="20" max="100" step="5" id="fovSlider">
+                                    </div>
+                                    <div class="col text-center">
+                                        <label for="near">Near</label>
+                                        <input type="number" class="form-control" id="near">
+                                        <label for="top">Top</label>
+                                        <input type="number" class="form-control" id="top" disabled>
+                                        <label for="bottom">Bottom</label>
+                                        <input type="number" class="form-control" id="bottom" disabled>
+                                    </div>
+                                    <div class="col text-center">
+                                        <label for="far">Far</label>
+                                        <input type="number" class="form-control" id="far">
+                                        <label for="left">Left</label>
+                                        <input type="number" class="form-control" id="left" disabled>
+                                        <label for="right">Right</label>
+                                        <input type="number" class="form-control" id="right" disabled>
+                                    </div>
+                                    <div class="col text-center">
+                                        <h4>Rotation</h4>
+                                        <!-- Rotation -->
+                                        <label for="xSlider">X Rot Speed</label>
+                                        <input type="range" class="custom-range" min="-5" max="5" step="0.1" id="xSlider">  
+                                        <label for="ySlider">Y Rot Speed</label>
+                                        <input type="range" class="custom-range" min="-5" max="5" step="0.1" id="ySlider">
+                                        <label for="zSlider">Z Rot Speed</label>
+                                        <input type="range" class="custom-range" min="-5" max="5" step="0.1" id="zSlider">
+                                    </div>
+                                </div>
+
+                            </div>
+                            <div class="tab-pane fade" id="v-pills-shading" role="tabpanel" aria-labelledby="v-pills-shading-tab">
+
+                                <!-- Shading -->
+                                <div class="row">
+                                    <div class="col">
+                                        <div class="col text-center">
+                                            <h4>Global Ambient</h4>
+                                            <label for="global_ambient_r">R</label>
+                                            <input type="number" class="form-control" min="0" max="1" step="0.01" id="global_ambient_r">
+                                            <label for="global_ambient_g">G</label>
+                                            <input type="number" class="form-control" min="0" max="1" step="0.01" id="global_ambient_g">
+                                            <label for="global_ambient_b">B</label>
+                                            <input type="number" class="form-control" min="0" max="1" step="0.01" id="global_ambient_b">
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <h4>Shader used</h4>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="inlineRadioOptions" id="phongShader" value="phong">
+                                            <label class="form-check-label" for="phongShader">Phong Shader</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="inlineRadioOptions" id="cartoonShader" value="cartoon">
+                                            <label class="form-check-label" for="cartoonShader">Cartoon Shader</label>
+                                        </div>
+
+                                        <!--
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="toggleFlatShading" disabled>
+                                            <label class="custom-control-label" for="toggleFlatShading">Flat Shading</label>
+                                        </div>
+                                        -->
+
+                                        <!-- Show texture -->
+                                        <h4>Textures</h4>
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="toggleTextures">
+                                            <label class="custom-control-label" for="toggleTextures">Toggle Textures</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                            <div class="tab-pane fade" id="v-pills-credits" role="tabpanel" aria-labelledby="v-pills-credits-tab">
+
+                                <div class="row">
+                                    <div class="col text-center">
+                                        
+                                        <h4>Credits</h4>
+                                        <b>Interactive Graphics - Homework 1</b> <br>
+                                        Stefano Esposito <br>
+                                        Academic Year 2019/2020 <br>
+                                        Course held by Professor Marco Schaerf <br><br>
+                                        <p>For the development of the application I used as reference the code presented during the lessons of the course and also the code of the examples provided by the textbook.</p>
+
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bootstrap stuff -->
+        <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+
+    </body>
+</html>

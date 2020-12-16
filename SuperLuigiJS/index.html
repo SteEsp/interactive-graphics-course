@@ -1,0 +1,93 @@
+<html>
+	<head>
+		<meta charset="UTF-8">
+    	<meta name="viewport" content="width=device-width,height=device-height,user-scalable=no,initial-scale=1,maximum-scale=1">
+		<title>SuperLuigi.js</title>
+		<link rel="stylesheet" href="css/main.css">
+
+		<!-- Import font -->
+		<link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet">
+
+		<!-- Favicon -->
+		<link rel="apple-touch-icon" sizes="57x57" href="./assets/favicon/apple-icon-57x57.png">
+		<link rel="apple-touch-icon" sizes="60x60" href="./assets/favicon/apple-icon-60x60.png">
+		<link rel="apple-touch-icon" sizes="72x72" href="./assets/favicon/apple-icon-72x72.png">
+		<link rel="apple-touch-icon" sizes="76x76" href="./assets/favicon/apple-icon-76x76.png">
+		<link rel="apple-touch-icon" sizes="114x114" href="./assets/favicon/apple-icon-114x114.png">
+		<link rel="apple-touch-icon" sizes="120x120" href="./assets/favicon/apple-icon-120x120.png">
+		<link rel="apple-touch-icon" sizes="144x144" href="./assets/favicon/apple-icon-144x144.png">
+		<link rel="apple-touch-icon" sizes="152x152" href="./assets/favicon/apple-icon-152x152.png">
+		<link rel="apple-touch-icon" sizes="180x180" href="./assets/favicon/apple-icon-180x180.png">
+		<link rel="icon" type="image/png" sizes="192x192"  href="./assets/favicon/android-icon-192x192.png">
+		<link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon/favicon-32x32.png">
+		<link rel="icon" type="image/png" sizes="96x96" href="./assets/favicon/favicon-96x96.png">
+		<link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon/favicon-16x16.png">
+		<link rel="manifest" href="./assets/favicon/manifest.json">
+		<meta name="msapplication-TileColor" content="#ffffff">
+		<meta name="msapplication-TileImage" content="./assets/favicon/ms-icon-144x144.png">
+		<meta name="theme-color" content="#ffffff">
+	</head>
+	<body> 
+
+		<div id="loadings">
+
+			<div id="models_loading">
+				<div>
+				  <div>Loading Models</div>
+				  <div class="progress"><div id="models_progressbar"></div></div>
+				</div>
+			</div>
+	
+			<div id="sounds_loading">
+				<div>
+				  <div>Loading Sounds</div>
+				  <div class="progress"><div id="sounds_progressbar"></div></div>
+				</div>
+			</div>	
+			
+		</div>
+
+		<div id="container"></div>
+		<div id="main_menu" hidden>
+			<img src="assets/images/logo.png"></img>
+			<h1><b>v 0.3.0 - Final</b></h1>
+			<p>Press <b>Enter</b> or <b>Swipe Up</b> to start!</p>
+			
+			<div id="credits">
+				<p>
+					<b>Interactive Graphics AA 2019/2020 - Final Project</b><br>
+					Stefano Esposito
+				</p>
+			</div>
+		</div>
+		<div id="game_pause" hidden>
+			<h1>Game Paused</h1>
+			<p>Press <b>Esc</b> to resume.</p>
+		</div>
+		<div id="game_over" hidden>
+			<h1>GAME OVER</h1>
+			<!-- TODO show scores leaderboard -->
+			<p>Press <b>F5</b> or <b>reload the page</b> to restart the game.</p>
+		</div>
+		<div id="scores_box" hidden>
+			<div class="Row">
+				<div class="Column">
+					<img src="assets/images/mushroom.png"></img>
+					<h2 id="health"></h2>
+				</div>
+				<div class="Column">
+					<img src="assets/images/coin.png"></img>
+					<h2 id="coins"></h2>
+				</div>
+				<div class="Column">
+					<img src="assets/images/clock.png"></img>
+					<h2 id="time"></h2>
+				</div>
+			</div>
+		</div>
+
+		<script src="./js/libs/swiped-events.js"></script>
+		<script src="./js/main.js" type="module"></script>
+
+	</body>
+</html>
