@@ -8,4 +8,4 @@ Repository containing the material produced (homeworks and final project) during
 The code here is outdated, neither well structured nor well commented; it would be possible to make many adjustments and optimisations (which were not the aim of the course). Maybe I will make some changes in the future. 
 
 ## Try it
-https://steesp.github.io/sapienza-interactive-graphics-course/
+https://steesp.github.io/webgl-interactive-graphics-course/
